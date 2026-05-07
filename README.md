@@ -39,5 +39,37 @@ A comprehensive, high-fidelity Pokemon companion app and arcade battle simulator
 3. **Explore**: Use the Maps feature to visualize different regions with active weather effects.
 4. **Research**: Deep dive into Pokemon evolution paths in the enhanced Pokedex.
 
+## 🚀 Getting Started
+
+### Prerequisites
+- **Node.js**: v18.x or higher
+- **npm** or **yarn**
+
+### Installation
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/alshafraz/Pokepoke.git
+   cd Pokepoke
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Run the development server**:
+   ```bash
+   npm run dev
+   ```
+
+4. **Build for production**:
+   ```bash
+   npm run build
+   npm start
+   ```
+
+5. **Open the app**:
+   Navigate to [http://localhost:3000](http://localhost:3000) in your browser.
+
 ---
 Created with ❤️ by [alshafraz](https://github.com/alshafraz)
