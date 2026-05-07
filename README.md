@@ -1,46 +1,43 @@
-# Pokepoke - Ultra Premium Mezastar Arcade Simulator
+# Pokepoke - The Ultimate Pokemon Hunter & Arcade Experience
 
-A high-fidelity, AAA-quality digital collectible and arcade battle simulator inspired by Pokémon Mezastar and modern gacha games.
+A comprehensive, high-fidelity Pokemon companion app and arcade battle simulator. Features a premium design system, interactive maps, a deep Pokedex, and a cinematic arcade collection system.
 
-## 🚀 Key Features
+## 🌟 Core Features
 
-### 💎 Ultra-Premium HoloCard System
-- **3D Parallax Tilt**: Interactive card response to mouse movement with multi-layered depth.
-- **Holographic Shaders**: Realistic rainbow sheen and foil effects that shift with viewing angles.
-- **Type-Thematic Environments**: 18 unique backgrounds based on Pokemon types (Lava for Fire, Storm for Electric, Void for Ghost, etc.).
-- **Dynamic Rarity Visuals**: 
-  - **Common/Rare**: Clean, standard tags.
-  - **Ultra/Super Rare**: Animated foil and inner glow.
-  - **Legendary/Mythic**: Energy overflow, particle emitters, and rainbow shifting borders.
+### 🎴 Mezastar Arcade Simulator (New!)
+- **Ultra-Premium HoloCards**: 3D parallax, holographic shaders, and type-thematic backgrounds.
+- **Cinematic Summoning**: Dramatic 3-phase reveal sequences for high-impact gacha pulls.
+- **Arcade Arena**: Face off against random enemies with a centralized VS UI and stacked card collection management.
+- **Stat-Based Rarity**: Realistic tiering system based on Base Stat Totals (BST).
 
-### 🎬 Cinematic Summoning Experience
-- **Three-Phase Reveal**: Dramatic "Charging" -> "Revealing" -> "Showcase" sequence.
-- **Visual Impact**: Screen shake, white-out flashes, and high-density particle bursts for rare pulls.
-- **Surprise Mechanics**: Guaranteed surprise with state-resetting animation logic.
+### 🔍 Shiny Hunter Hub
+- **Real-time Shiny Tracking**: Specialized interface for tracking your hunt progress.
+- **Advanced Statistics**: Monitor encounter rates and probabilities.
+- **Visual Feedback**: Dynamic shiny effects and status indicators.
 
-### ⚔️ Arcade Battle Arena
-- **VS Centralized UI**: Intuitive battle preparation with a central "Initiate Fight" orb.
-- **Interactive Fighter Selection**: "Stacked Card" layout allowing dense collection browsing with hover pop-up effects.
-- **Strategic Sorting & Filtering**: Quickly organize your team by Power (CP), Defense, Rarity, or Date Added.
+### 📖 Next-Gen Pokedex
+- **Branching Evolutions**: Recursive visualization of complex evolution trees (e.g., Eevee, Tyrogue).
+- **Comprehensive Data**: Detailed stats, types, moves, and lore for all generations.
+- **Type-Thematic UI**: Each Pokemon page adapts its theme based on its primary type.
 
-### 🧬 Advanced Game Logic
-- **Lore-Accurate Rarity**: Monsters are assigned rarity based on their Base Stat Total (BST) and legendary status, ensuring logic-driven tiering.
-- **Branching Evolution Trees**: Support for complex evolution paths (like Eevee) with recursive traversal visualization.
-- **Combat Power (CP)**: Dynamic power calculation influenced by stats and Shiny status.
+### 🗺️ Interactive Maps & Weather
+- **Regional Maps**: Explore detailed maps of various Pokemon regions.
+- **Dynamic Weather Overlays**: Real-time visual weather effects (Rain, Snow, Storms) that affect the exploration experience.
+- **Tactical Overlays**: View points of interest and regional markers.
 
 ## 🛠️ Technology Stack
-- **Framework**: Next.js 14+
+- **Framework**: Next.js 14+ (Turbopack)
 - **Animation**: Framer Motion (3D Transforms, Layout Animations)
 - **Icons**: Lucide React
 - **State Management**: Zustand
-- **Data Source**: PokéAPI v2
-- **Styling**: Tailwind CSS
+- **Database**: Supabase Integration
+- **Styling**: Tailwind CSS & Vanilla CSS
 
-## 🎮 How to Play
-1. **Summon**: Spend coins to pull high-impact monster tags from various packs.
-2. **Collect**: View your premium holographic collection in the 'Cards' tab.
-3. **Battle**: Select your strongest fighter and face random enemies in the Arcade Arena.
-4. **Admin**: Use the secret trophy trigger (7 clicks) to access the dev coin menu.
+## 🎮 How to Use
+1. **Navigate**: Use the premium navbar to switch between the Pokedex, Shiny Hunter, Maps, and Mezastar.
+2. **Collect**: In Mezastar, spend coins to summon rare holographic tags.
+3. **Explore**: Use the Maps feature to visualize different regions with active weather effects.
+4. **Research**: Deep dive into Pokemon evolution paths in the enhanced Pokedex.
 
 ---
-Created with ❤️ by alshafraz
+Created with ❤️ by [alshafraz](https://github.com/alshafraz)
