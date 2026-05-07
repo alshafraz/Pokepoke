@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pokepoke - Ultra Premium Mezastar Arcade Simulator
 
-## Getting Started
+A high-fidelity, AAA-quality digital collectible and arcade battle simulator inspired by Pokémon Mezastar and modern gacha games.
 
-First, run the development server:
+## 🚀 Key Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### 💎 Ultra-Premium HoloCard System
+- **3D Parallax Tilt**: Interactive card response to mouse movement with multi-layered depth.
+- **Holographic Shaders**: Realistic rainbow sheen and foil effects that shift with viewing angles.
+- **Type-Thematic Environments**: 18 unique backgrounds based on Pokemon types (Lava for Fire, Storm for Electric, Void for Ghost, etc.).
+- **Dynamic Rarity Visuals**: 
+  - **Common/Rare**: Clean, standard tags.
+  - **Ultra/Super Rare**: Animated foil and inner glow.
+  - **Legendary/Mythic**: Energy overflow, particle emitters, and rainbow shifting borders.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 🎬 Cinematic Summoning Experience
+- **Three-Phase Reveal**: Dramatic "Charging" -> "Revealing" -> "Showcase" sequence.
+- **Visual Impact**: Screen shake, white-out flashes, and high-density particle bursts for rare pulls.
+- **Surprise Mechanics**: Guaranteed surprise with state-resetting animation logic.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### ⚔️ Arcade Battle Arena
+- **VS Centralized UI**: Intuitive battle preparation with a central "Initiate Fight" orb.
+- **Interactive Fighter Selection**: "Stacked Card" layout allowing dense collection browsing with hover pop-up effects.
+- **Strategic Sorting & Filtering**: Quickly organize your team by Power (CP), Defense, Rarity, or Date Added.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 🧬 Advanced Game Logic
+- **Lore-Accurate Rarity**: Monsters are assigned rarity based on their Base Stat Total (BST) and legendary status, ensuring logic-driven tiering.
+- **Branching Evolution Trees**: Support for complex evolution paths (like Eevee) with recursive traversal visualization.
+- **Combat Power (CP)**: Dynamic power calculation influenced by stats and Shiny status.
 
-## Learn More
+## 🛠️ Technology Stack
+- **Framework**: Next.js 14+
+- **Animation**: Framer Motion (3D Transforms, Layout Animations)
+- **Icons**: Lucide React
+- **State Management**: Zustand
+- **Data Source**: PokéAPI v2
+- **Styling**: Tailwind CSS
 
-To learn more about Next.js, take a look at the following resources:
+## 🎮 How to Play
+1. **Summon**: Spend coins to pull high-impact monster tags from various packs.
+2. **Collect**: View your premium holographic collection in the 'Cards' tab.
+3. **Battle**: Select your strongest fighter and face random enemies in the Arcade Arena.
+4. **Admin**: Use the secret trophy trigger (7 clicks) to access the dev coin menu.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+Created with ❤️ by alshafraz
