@@ -76,7 +76,11 @@ export interface GameStore {
   selectCard: (card: MonsterCard) => void;
   addToCollection: (card: MonsterCard) => void;
   startBattle: (player: MonsterCard, enemy: MonsterCard) => void;
-  performAction: (type: 'attack' | 'defend' | 'special' | 'signature') => void;
+  
+  // Split Battle Actions for Sequential Animation
+  applyPlayerTurn: (type: 'attack' | 'defend' | 'special' | 'signature') => void;
+  applyEnemyTurn: () => void;
+  
   resetBattle: () => void;
   summonCard: (card: MonsterCard) => void;
   addCoins: (amount: number) => void;
@@ -132,7 +136,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((s) => ({ collection: [...s.collection, card] })),
 
   startBattle: (player, enemy) => set((s) => {
-    // Persistent HP check
     const persistentHp = s.arcadeSession.collectionHp[player.id];
     const playerHp = persistentHp !== undefined ? persistentHp : player.hp;
 
@@ -148,8 +151,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     };
   }),
 
-  performAction: (type) => {
-    const { battle, arcadeSession } = get();
+  // ── STEP 1: PLAYER TURN ──
+  applyPlayerTurn: (type) => {
+    const { battle } = get();
     if (!battle.playerCard || !battle.enemyCard) return;
 
     let dmg = 0;
@@ -158,7 +162,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     let isCritical = Math.random() < 0.2;
     let isDefending = false;
 
-    // Define multipliers and costs
     const skillConfig = {
       attack: { dmgMult: 1.0, energyReq: 0, energyGain: 20 },
       defend: { dmgMult: 0, energyReq: 0, energyGain: 10 },
@@ -168,49 +171,60 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     const config = skillConfig[type];
 
-    // Check Energy
     if (battle.playerEnergy < config.energyReq) {
       set((s) => ({
-        battle: { ...s.battle, log: [`⚠️ Not enough energy for ${type}!`, ...s.battle.log.slice(0, 4)] }
+        battle: { ...s.battle, log: [`⚠️ Not enough energy!`, ...s.battle.log.slice(0, 4)] }
       }));
       return;
     }
 
     if (type === 'defend') {
       isDefending = true;
-      logEntry = `🛡️ ${battle.playerCard.displayName} is taking a defensive stance!`;
+      logEntry = `🛡️ ${battle.playerCard.displayName} is defending!`;
     } else {
       const baseAtk = battle.playerCard.attack;
       const baseDef = battle.enemyCard.defense;
-      const rawDmg = Math.max(5, baseAtk * config.dmgMult - baseDef * 0.4);
+      const rawDmg = Math.max(10, baseAtk * config.dmgMult - baseDef * 0.2); // Adjusted scaling
       dmg = Math.round(rawDmg * (isCritical ? 1.75 : 1) * (0.85 + Math.random() * 0.3));
       
-      const moveName = type === 'attack' ? 'Basic Attack' : type === 'special' ? battle.playerCard.specialSkill : battle.playerCard.specialMove;
-      logEntry = isCritical 
-        ? `💥 CRITICAL! ${moveName} dealt ${dmg} damage!` 
-        : `⚔️ ${moveName} dealt ${dmg} damage!`;
+      const moveName = type === 'attack' ? 'Attack' : type === 'special' ? battle.playerCard.specialSkill : battle.playerCard.specialMove;
+      logEntry = `⚔️ ${battle.playerCard.displayName} used ${moveName} for ${dmg}!`;
     }
 
     const newEnemyHp = Math.max(0, battle.enemyHp - dmg);
     const newPlayerEnergy = Math.min(100, battle.playerEnergy - config.energyReq + config.energyGain);
+    const newPhase = newEnemyHp <= 0 ? 'victory' : 'battling';
 
-    // Enemy Turn Logic (Simple AI)
-    let enemyDmg = 0;
-    let enemyLog = '';
+    set((s) => ({
+      battle: {
+        ...s.battle,
+        phase: newPhase,
+        enemyHp: newEnemyHp,
+        playerEnergy: newPlayerEnergy,
+        log: [logEntry, ...s.battle.log.slice(0, 4)],
+        lastDamage: dmg,
+        isCritical,
+        isDefending,
+      },
+    }));
+  },
+
+  // ── STEP 2: ENEMY TURN ──
+  applyEnemyTurn: () => {
+    const { battle, arcadeSession } = get();
+    if (!battle.playerCard || !battle.enemyCard || battle.phase !== 'battling' || battle.enemyHp <= 0) return;
+
     const canEnemySpecial = battle.enemyEnergy >= 40;
     const enemyAction = canEnemySpecial && Math.random() > 0.6 ? 'special' : 'attack';
     
     const enemyBaseAtk = battle.enemyCard.attack;
     const enemyBaseDef = battle.playerCard.defense;
-    const enemyRawDmg = Math.max(3, enemyBaseAtk * (enemyAction === 'special' ? 1.5 : 1) - enemyBaseDef * (isDefending ? 0.8 : 0.3));
-    enemyDmg = Math.round(enemyRawDmg * (0.8 + Math.random() * 0.4));
+    const enemyRawDmg = Math.max(8, enemyBaseAtk * (enemyAction === 'special' ? 1.5 : 1) - enemyBaseDef * (battle.isDefending ? 0.6 : 0.2));
+    const enemyDmg = Math.round(enemyRawDmg * (0.8 + Math.random() * 0.4));
     
     const newPlayerHp = Math.max(0, battle.playerHp - enemyDmg);
     const newEnemyEnergy = Math.min(100, battle.enemyEnergy + (enemyAction === 'special' ? -40 : 20));
-    
-    enemyLog = enemyAction === 'special' 
-      ? `🌪️ Enemy used ${battle.enemyCard.specialSkill} for ${enemyDmg}!`
-      : `🥊 Enemy countered for ${enemyDmg}!`;
+    const enemyLog = `🥊 Enemy used ${enemyAction === 'special' ? battle.enemyCard.specialSkill : 'Attack'} for ${enemyDmg}!`;
 
     // Persist HP to session
     const newCollectionHp = {
@@ -218,22 +232,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
       [battle.playerCard.id]: newPlayerHp
     };
 
-    const newPhase = newEnemyHp <= 0 ? 'victory' : newPlayerHp <= 0 ? 'defeat' : 'battling';
+    const newPhase = newPlayerHp <= 0 ? 'defeat' : 'battling';
 
     set((s) => ({
       arcadeSession: { ...s.arcadeSession, collectionHp: newCollectionHp },
       battle: {
         ...s.battle,
         phase: newPhase,
-        enemyHp: newEnemyHp,
         playerHp: newPlayerHp,
-        playerEnergy: newPlayerEnergy,
         enemyEnergy: newEnemyEnergy,
+        log: [enemyLog, ...s.battle.log.slice(0, 4)],
+        lastDamage: enemyDmg,
+        isCritical: false,
         turn: s.battle.turn + 1,
-        log: [enemyLog, logEntry, ...s.battle.log.slice(0, 3)],
-        lastDamage: dmg,
-        isCritical,
-        isDefending,
       },
     }));
   },

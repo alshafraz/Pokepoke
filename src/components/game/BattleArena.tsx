@@ -33,7 +33,7 @@ const SKILL_COLORS: Record<string, { bg: string; text: string; icon: any }> = {
 };
 
 export function BattleArena() {
-  const { battle, performAction, resetBattle, addCoins, addXp, setMode, arcadeSession, recordRoundResult, endArcadeSession } = useGameStore();
+  const { battle, applyPlayerTurn, applyEnemyTurn, resetBattle, setMode, arcadeSession, recordRoundResult, endArcadeSession } = useGameStore();
   
   // Animation States
   const [playerAttackAnim, setPlayerAttackAnim] = useState(false);
@@ -64,32 +64,42 @@ export function BattleArena() {
 
     setIsTurnActive(true);
 
-    // ── STEP 1: PLAYER ATTACK SEQUENCE ──
+    // ── PHASE 1: PLAYER ACTION ──
     if (type !== 'defend') {
       setPlayerAttackAnim(true);
-      setTimeout(() => { setIsHitting(true); setShakeEnemy(true); }, 300);
+      // Impact logic
+      setTimeout(() => { 
+        setIsHitting(true); 
+        setShakeEnemy(true); 
+        applyPlayerTurn(type); // ONLY apply damage to enemy here
+      }, 300);
+    } else {
+       applyPlayerTurn(type); // Defend applies immediately (buff)
     }
 
-    // ── STEP 2: APPLY DATA & START ENEMY COUNTER ──
+    // ── PHASE 2: WAIT & ENEMY COUNTER ──
     setTimeout(() => {
       setPlayerAttackAnim(false);
       setIsHitting(false);
       setShakeEnemy(false);
       
-      // Update logic (this updates HP in store)
-      performAction(type);
-
-      // If enemy is still alive, trigger counter attack animation
-      if (battle.enemyHp > 10) { // Check before update is risky but visually we want the sequence
+      // If battle continues, trigger enemy counter
+      const currentEnemyHp = useGameStore.getState().battle.enemyHp;
+      if (currentEnemyHp > 0) {
          setTimeout(() => {
             setEnemyAttackAnim(true);
-            setTimeout(() => { setShakePlayer(true); }, 300);
+            // Enemy Impact logic
+            setTimeout(() => { 
+              setShakePlayer(true); 
+              applyEnemyTurn(); // ONLY apply damage to player here
+            }, 300);
+
             setTimeout(() => { 
                setEnemyAttackAnim(false); 
                setShakePlayer(false);
-               setIsTurnActive(false); // Turn finished
+               setIsTurnActive(false); 
             }, 600);
-         }, 500);
+         }, 400);
       } else {
          setIsTurnActive(false);
       }
@@ -114,10 +124,8 @@ export function BattleArena() {
 
   return (
     <div className={`min-h-screen bg-gradient-to-b ${theme.bg} flex flex-col relative overflow-hidden font-sans`}>
-      {/* ── BACKGROUND ── */}
       <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.02)_50%)] bg-[size:100%_4px] pointer-events-none z-10" />
 
-      {/* ── CENTER DIVIDER ── */}
       <div className="absolute inset-0 flex justify-center items-center pointer-events-none z-20">
         <motion.div 
           animate={{ 
@@ -130,11 +138,9 @@ export function BattleArena() {
         />
       </div>
 
-      {/* ── HEADER HUD ── */}
       <div className="absolute top-0 left-0 right-0 p-6 flex flex-col items-center z-50">
         <div className="flex justify-between w-full max-w-6xl items-center gap-12">
           
-          {/* Player HUD */}
           <div className="flex-1">
              <div className={`bg-slate-950/80 border-4 rounded-3xl p-4 shadow-2xl backdrop-blur-xl transition-all duration-300 ${shakePlayer ? 'border-white scale-105 shadow-white/50' : 'border-sky-500'}`}>
                 <div className="flex justify-between items-end mb-2">
@@ -162,7 +168,6 @@ export function BattleArena() {
              </div>
           </div>
 
-          {/* Enemy HUD */}
           <div className="flex-1 relative">
              <div className={`bg-slate-950/80 border-4 rounded-3xl p-4 shadow-2xl backdrop-blur-xl transition-all duration-300 ${shakeEnemy ? 'border-white scale-105 shadow-white/50' : 'border-rose-500'}`}>
                 <div className="flex justify-between items-end mb-2">
@@ -183,18 +188,12 @@ export function BattleArena() {
         </div>
       </div>
 
-      {/* ── BATTLEFIELD ── */}
       <div className="flex-1 flex pt-24">
         
-        {/* Player Side (Left) */}
         <div className="flex-1 flex items-center justify-center relative z-30">
           <AnimatePresence>
             {battle.playerCard && (
-              <motion.div 
-                initial={{ x: -200, opacity: 0 }} 
-                animate={{ x: 0, opacity: 1 }} 
-                className="relative"
-              >
+              <motion.div initial={{ x: -200, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="relative">
                 <motion.div
                   animate={shakePlayer ? { x: [-15, 15, -15, 15, 0], filter: ['brightness(2)', 'brightness(1)'] } : { y: [0, -20, 0], rotate: [0, 2, 0] }}
                   transition={shakePlayer ? { duration: 0.3 } : { duration: 4, repeat: Infinity, ease: "easeInOut" }}
@@ -219,15 +218,10 @@ export function BattleArena() {
           </AnimatePresence>
         </div>
 
-        {/* Enemy Side (Right) */}
         <div className="flex-1 flex items-center justify-center relative z-30">
           <AnimatePresence>
             {battle.enemyCard && (
-              <motion.div 
-                initial={{ x: 200, opacity: 0 }} 
-                animate={{ x: 0, opacity: 1 }} 
-                className="relative"
-              >
+              <motion.div initial={{ x: 200, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="relative">
                 <motion.div
                   animate={shakeEnemy ? { x: [-15, 15, -15, 15, 0], filter: ['brightness(2)', 'brightness(1)'] } : { y: [0, -20, 0], rotate: [0, -2, 0] }}
                   transition={shakeEnemy ? { duration: 0.3 } : { duration: 4, repeat: Infinity, ease: "easeInOut" }}
@@ -248,30 +242,18 @@ export function BattleArena() {
           </AnimatePresence>
         </div>
 
-        {/* ALIGNED LABELS ROW */}
         <div className="absolute bottom-[28%] left-0 right-0 px-24 flex justify-between z-40 pointer-events-none">
-           <motion.div 
-            initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-            className="flex items-center gap-3 bg-sky-500 border-4 border-white px-8 py-2 rounded-full shadow-[0_10px_30px_rgba(56,189,248,0.5)]"
-           >
-              <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
-                 <span className="text-[10px] font-black text-sky-500">1P</span>
-              </div>
+           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="flex items-center gap-3 bg-sky-500 border-4 border-white px-8 py-2 rounded-full shadow-[0_10px_30px_rgba(56,189,248,0.5)]">
+              <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center"><span className="text-[10px] font-black text-sky-500">1P</span></div>
               <span className="text-xs font-black text-white uppercase tracking-widest italic">YOU</span>
            </motion.div>
 
-           <motion.div 
-            initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-            className="flex items-center gap-3 bg-rose-500 border-4 border-white px-8 py-2 rounded-full shadow-[0_10px_30px_rgba(244,63,94,0.5)]"
-           >
+           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="flex items-center gap-3 bg-rose-500 border-4 border-white px-8 py-2 rounded-full shadow-[0_10px_30px_rgba(244,63,94,0.5)]">
               <span className="text-xs font-black text-white uppercase tracking-widest italic">CPU</span>
-              <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
-                 <span className="text-[10px] font-black text-rose-500">EN</span>
-              </div>
+              <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center"><span className="text-[10px] font-black text-rose-500">EN</span></div>
            </motion.div>
         </div>
 
-        {/* Action Overlay */}
         <AnimatePresence>
           {(isHitting || enemyAttackAnim) && (
             <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
@@ -281,11 +263,10 @@ export function BattleArena() {
           )}
         </AnimatePresence>
 
-        {/* Cinematic Damage */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[60]">
            <AnimatePresence>
             {battle.lastDamage && (
-              <motion.div key={battle.turn} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: battle.isCritical ? 6 : 4, opacity: 1, y: -200 }} exit={{ opacity: 0 }} transition={{ duration: 0.8, ease: "backOut" }}
+              <motion.div key={battle.turn + (isHitting ? 'p' : 'e')} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: battle.isCritical ? 6 : 4, opacity: 1, y: -200 }} exit={{ opacity: 0 }} transition={{ duration: 0.8, ease: "backOut" }}
                 className={`font-black italic tracking-tighter drop-shadow-2xl ${battle.isCritical ? 'text-yellow-400' : 'text-white'}`}
               >
                 {battle.lastDamage}
@@ -295,50 +276,15 @@ export function BattleArena() {
         </div>
       </div>
 
-      {/* ── FOOTER CONTROLS ── */}
       <div className="p-8 bg-gradient-to-t from-black via-black/90 to-transparent z-[60]">
         <div className="max-w-6xl mx-auto flex flex-col items-center gap-6">
           
           {battle.phase === 'battling' && !showResult && (
             <div className={`grid grid-cols-2 sm:grid-cols-4 gap-8 w-full transition-opacity duration-300 ${isTurnActive ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
-              <SkillButton 
-                label="ATTACK!" 
-                desc="Basic Strike" 
-                detail={`ATK: ${battle.playerCard?.attack}`}
-                cost={0} 
-                icon={<Swords size={28} />} 
-                color="from-red-600 to-rose-700" 
-                onClick={() => handlePerformAction('attack')} 
-              />
-              <SkillButton 
-                label="DEFEND" 
-                desc="Guard Mode" 
-                detail={`DEF: ${battle.playerCard?.defense} (+🛡️)`}
-                cost={0} 
-                icon={<Shield size={28} />} 
-                color="from-blue-600 to-indigo-700" 
-                onClick={() => handlePerformAction('defend')} 
-              />
-              <SkillButton 
-                label={battle.playerCard?.specialSkill || 'SPECIAL'} 
-                desc="Strong Skill" 
-                detail={`DMG: ${Math.round((battle.playerCard?.attack || 0) * 1.6)}`}
-                cost={40} 
-                icon={(SKILL_COLORS[battle.playerCard?.types[0] || 'default'] || SKILL_COLORS.default).icon} 
-                color={(SKILL_COLORS[battle.playerCard?.types[0] || 'default'] || SKILL_COLORS.default).bg} 
-                energy={battle.playerEnergy}
-                onClick={() => handlePerformAction('special')} 
-              />
-              <SkillButton 
-                label={battle.playerCard?.specialMove || 'ULTIMATE'} 
-                desc="Finish Him!" 
-                detail={`DMG: ${Math.round((battle.playerCard?.attack || 0) * 2.5)}`}
-                cost={80} 
-                icon={<Trophy size={28} />} 
-                color="from-amber-400 to-orange-600" 
-                energy={battle.playerEnergy}
-                onClick={() => handlePerformAction('signature')} 
-              />
+              <SkillButton label="ATTACK!" desc="Basic Strike" detail={`ATK: ${battle.playerCard?.attack}`} cost={0} icon={<Swords size={28} />} color="from-red-600 to-rose-700" onClick={() => handlePerformAction('attack')} />
+              <SkillButton label="DEFEND" desc="Guard Mode" detail={`DEF: ${battle.playerCard?.defense} (+🛡️)`} cost={0} icon={<Shield size={28} />} color="from-blue-600 to-indigo-700" onClick={() => handlePerformAction('defend')} />
+              <SkillButton label={battle.playerCard?.specialSkill || 'SPECIAL'} desc="Strong Skill" detail={`DMG: ${Math.round((battle.playerCard?.attack || 0) * 1.6)}`} cost={40} icon={(SKILL_COLORS[battle.playerCard?.types[0] || 'default'] || SKILL_COLORS.default).icon} color={(SKILL_COLORS[battle.playerCard?.types[0] || 'default'] || SKILL_COLORS.default).bg} energy={battle.playerEnergy} onClick={() => handlePerformAction('special')} />
+              <SkillButton label={battle.playerCard?.specialMove || 'ULTIMATE'} desc="Finish Him!" detail={`DMG: ${Math.round((battle.playerCard?.attack || 0) * 2.5)}`} cost={80} icon={<Trophy size={28} />} color="from-amber-400 to-orange-600" energy={battle.playerEnergy} onClick={() => handlePerformAction('signature')} />
             </div>
           )}
 
@@ -347,24 +293,19 @@ export function BattleArena() {
               <h3 className={`text-7xl font-black italic uppercase tracking-tighter ${battle.phase === 'victory' ? 'text-amber-400 drop-shadow-[0_0_40px_rgba(251,191,36,0.8)]' : 'text-rose-500'}`}>
                 {battle.phase === 'victory' ? 'YOU WIN!' : 'OH NO! LOSE!'}
               </h3>
-              <button onClick={() => handleRoundEnd(battle.phase === 'victory' ? 'won' : 'lost')} 
-                className={`px-24 py-8 rounded-[3rem] font-black uppercase tracking-widest text-3xl shadow-[0_30px_60px_rgba(0,0,0,0.5)] transition-all hover:scale-110 active:scale-90 ${battle.phase === 'victory' ? 'bg-sky-500 text-slate-950' : 'bg-rose-500 text-white'}`}>
+              <button onClick={() => handleRoundEnd(battle.phase === 'victory' ? 'won' : 'lost')} className={`px-24 py-8 rounded-[3rem] font-black uppercase tracking-widest text-3xl shadow-[0_30px_60px_rgba(0,0,0,0.5)] transition-all hover:scale-110 active:scale-90 ${battle.phase === 'victory' ? 'bg-sky-500 text-slate-950' : 'bg-rose-500 text-white'}`}>
                 {arcadeSession.rounds + 1 >= arcadeSession.maxRounds ? 'END GAME →' : 'NEXT FIGHT! →'}
               </button>
             </motion.div>
           )}
 
           {battle.phase === 'battling' && !showResult && (
-             <button onClick={handleFlee} className="text-xs font-black uppercase text-slate-700 hover:text-white transition-colors tracking-[0.5em] mt-4">
-                [ QUIT BATTLE ]
-             </button>
+             <button onClick={handleFlee} className="text-xs font-black uppercase text-slate-700 hover:text-white transition-colors tracking-[0.5em] mt-4">[ QUIT BATTLE ]</button>
           )}
         </div>
       </div>
 
-      {arcadeSession.captureTarget && (
-        <CaptureScreen pokemon={arcadeSession.captureTarget} onClose={() => endArcadeSession()} />
-      )}
+      {arcadeSession.captureTarget && <CaptureScreen pokemon={arcadeSession.captureTarget} onClose={() => endArcadeSession()} />}
     </div>
   );
 }
@@ -372,30 +313,14 @@ export function BattleArena() {
 function SkillButton({ label, desc, detail, cost, icon, color, onClick, energy = 100 }: { label: string, desc: string, detail: string, cost: number, icon: any, color: string, onClick: () => void, energy?: number }) {
   const isDisabled = energy < cost;
   return (
-    <motion.button
-      whileHover={isDisabled ? {} : { scale: 1.1, y: -15, rotate: 1 }}
-      whileTap={isDisabled ? {} : { scale: 0.9 }}
-      onClick={onClick}
-      disabled={isDisabled}
-      className={`relative p-8 rounded-[3.5rem] border-8 flex flex-col items-center gap-2 text-center transition-all shadow-2xl ${
-        isDisabled 
-          ? 'bg-slate-900/90 border-slate-800 opacity-20 cursor-not-allowed' 
-          : `bg-gradient-to-br ${color} border-white/40 hover:border-white shadow-[0_20px_50px_rgba(0,0,0,0.5)]`
-      }`}
-    >
-      <div className={`p-4 rounded-3xl bg-black/20 shadow-inner ${isDisabled ? 'text-slate-800' : 'text-white'}`}>
-        {icon}
-      </div>
+    <motion.button whileHover={isDisabled ? {} : { scale: 1.1, y: -15, rotate: 1 }} whileTap={isDisabled ? {} : { scale: 0.9 }} onClick={onClick} disabled={isDisabled} className={`relative p-8 rounded-[3.5rem] border-8 flex flex-col items-center gap-2 text-center transition-all shadow-2xl ${isDisabled ? 'bg-slate-900/90 border-slate-800 opacity-20 cursor-not-allowed' : `bg-gradient-to-br ${color} border-white/40 hover:border-white shadow-[0_20px_50px_rgba(0,0,0,0.5)]`}`}>
+      <div className={`p-4 rounded-3xl bg-black/20 shadow-inner ${isDisabled ? 'text-slate-800' : 'text-white'}`}>{icon}</div>
       <div className="flex flex-col">
         <span className={`text-xl font-black uppercase tracking-tighter leading-none ${isDisabled ? 'text-slate-800' : 'text-white'}`}>{label}</span>
         <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-1">{desc}</span>
         {!isDisabled && <span className="text-[10px] font-black text-white/90 uppercase mt-1 bg-black/20 px-2 py-0.5 rounded-full">{detail}</span>}
       </div>
-      {cost > 0 && (
-        <div className="absolute top-6 right-6 bg-black/50 px-4 py-1.5 rounded-full text-xs font-black text-white border-2 border-white/20">
-          {cost}E
-        </div>
-      )}
+      {cost > 0 && <div className="absolute top-6 right-6 bg-black/50 px-4 py-1.5 rounded-full text-xs font-black text-white border-2 border-white/20">{cost}E</div>}
     </motion.button>
   );
 }
