@@ -3,17 +3,62 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/useGameStore';
-import { fetchRandomMonster, getRarityColor } from '@/services/gameData';
+import { fetchRandomMonster } from '@/services/gameData';
 import { SummonAnimation } from './SummonAnimation';
 import { MonsterCard, Rarity } from '@/store/useGameStore';
-import { Sparkles, Star, Zap, Package } from 'lucide-react';
+import { Sparkles, Coins, Info } from 'lucide-react';
 
 const SUMMON_PACKS = [
-  { id: 'basic',  name: 'Basic Pack',    cost: 50,   icon: '📦', desc: 'Standard pull',         color: 'from-slate-700 to-slate-900', guaranteed: undefined },
-  { id: 'rare',   name: 'Rare Pack',     cost: 150,  icon: '💎', desc: 'Rare+ guaranteed',       color: 'from-blue-700 to-blue-900',   guaranteed: 'Rare' as Rarity },
-  { id: 'ultra',  name: 'Ultra Pack',    cost: 350,  icon: '🔥', desc: 'Ultra Rare+ guaranteed', color: 'from-rose-700 to-rose-900',   guaranteed: 'Ultra Rare' as Rarity },
-  { id: 'legend', name: 'Legend Pack',   cost: 800,  icon: '⭐', desc: 'Legendary guaranteed',   color: 'from-amber-600 to-amber-900', guaranteed: 'Legendary' as Rarity },
-  { id: 'mythic', name: '✨ MYTHIC',     cost: 2000, icon: '🌟', desc: 'Mythic guaranteed!',     color: 'from-pink-600 via-purple-700 to-cyan-800', guaranteed: 'Mythic' as Rarity },
+  { 
+    id: 'basic',  
+    name: 'BASIC',    
+    cost: 50,   
+    icon: '/images/game/poke-ball-hd.png', 
+    color: 'from-slate-600/20 to-slate-900/60',
+    accent: 'bg-slate-400',
+    guaranteed: undefined,
+    rates: { common: '50%', rare: '25%', sr: '12%', ur: '8%', leg: '4%', myth: '1%' }
+  },
+  { 
+    id: 'rare',   
+    name: 'GREAT',     
+    cost: 150,  
+    icon: '/images/game/great-ball-hd.png', 
+    color: 'from-blue-600/20 to-indigo-950/60',   
+    accent: 'bg-blue-400',
+    guaranteed: 'Rare' as Rarity,
+    rates: { common: '20%', rare: '40%', sr: '20%', ur: '12%', leg: '6%', myth: '2%' }
+  },
+  { 
+    id: 'ultra',  
+    name: 'ULTRA',    
+    cost: 350,  
+    icon: '/images/game/ultra-ball-hd.png', 
+    color: 'from-amber-600/20 to-orange-950/60',   
+    accent: 'bg-amber-400',
+    guaranteed: 'Ultra Rare' as Rarity,
+    rates: { common: '0%', rare: '30%', sr: '35%', ur: '20%', leg: '10%', myth: '5%' }
+  },
+  { 
+    id: 'legend', 
+    name: 'MASTER',   
+    cost: 800,  
+    icon: '/images/game/master-ball-hd.png', 
+    color: 'from-purple-600/20 to-indigo-950/60', 
+    accent: 'bg-purple-400',
+    guaranteed: 'Legendary' as Rarity,
+    rates: { common: '0%', rare: '0%', sr: '0%', ur: '0%', leg: '80%', myth: '20%' }
+  },
+  { 
+    id: 'mythic', 
+    name: 'LUXURY',     
+    cost: 2000, 
+    icon: '/images/game/luxury-ball-hd.png', 
+    color: 'from-rose-600/20 to-rose-950/60', 
+    accent: 'bg-rose-400',
+    guaranteed: 'Mythic' as Rarity,
+    rates: { common: '0%', rare: '0%', sr: '0%', ur: '0%', leg: '0%', myth: '100%' }
+  },
 ];
 
 export function SummonPanel() {
@@ -21,6 +66,9 @@ export function SummonPanel() {
   const [summoning, setSummoning] = useState(false);
   const [pendingCard, setPendingCard] = useState<MonsterCard | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hoveredPack, setHoveredPack] = useState<typeof SUMMON_PACKS[0] | null>(null);
+
+  const activeRates = (hoveredPack || SUMMON_PACKS[0]).rates;
 
   const handleSummon = async (pack: typeof SUMMON_PACKS[0]) => {
     if (!spendCoins(pack.cost)) {
@@ -45,92 +93,114 @@ export function SummonPanel() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
-      {/* Header */}
-      <div className="text-center">
-        <motion.div
-          animate={{ rotate: [0, 5, -5, 0] }}
-          transition={{ duration: 3, repeat: Infinity }}
-          className="text-6xl mb-4"
-        >
-          🎴
-        </motion.div>
-        <h2 className="text-3xl font-black italic uppercase tracking-tighter neon-text mb-2">Monster Summon</h2>
-        <p className="text-slate-400 text-sm">Spend coins to summon powerful monsters to your collection</p>
-        <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-400/30 rounded-full">
-          <span className="text-amber-400 font-black text-sm">🪙 {coins.toLocaleString()} Coins</span>
-        </div>
-      </div>
-
-      {/* Error */}
+    <div className="h-full flex flex-col gap-4 max-w-7xl mx-auto overflow-hidden relative">
+      
+      {/* Error Message Overlay */}
       <AnimatePresence>
         {error && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="text-center py-3 px-6 bg-rose-500/10 border border-rose-400/40 rounded-2xl text-rose-400 font-black text-sm"
+            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] py-4 px-10 bg-rose-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl"
           >
             {error}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Packs Grid */}
-      <div className="space-y-4">
-        {SUMMON_PACKS.map((pack) => {
+      {/* ── 5-COLUMN GRID (LOCAL STABLE ASSETS) ── */}
+      <div className="flex-1 grid grid-cols-5 gap-4 min-h-0 py-2">
+        {SUMMON_PACKS.map((pack, i) => {
           const canAfford = coins >= pack.cost;
           return (
             <motion.button
               key={pack.id}
-              whileHover={canAfford ? { scale: 1.02, x: 4 } : {}}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: i * 0.05 }}
+              whileHover={canAfford ? { scale: 1.02, y: -10 } : {}}
               whileTap={canAfford ? { scale: 0.98 } : {}}
+              onMouseEnter={() => setHoveredPack(pack)}
+              onMouseLeave={() => setHoveredPack(null)}
               onClick={() => !summoning && handleSummon(pack)}
               disabled={!canAfford || summoning}
-              className={`w-full relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r ${pack.color} p-5 flex items-center gap-5 transition-all
-                ${!canAfford ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:border-white/30 hover:shadow-xl'}`}
+              className={`group relative rounded-[2.5rem] border-2 border-white/5 bg-gradient-to-b ${pack.color} p-6 overflow-hidden flex flex-col items-center justify-between transition-all
+                ${!canAfford ? 'opacity-20 grayscale cursor-not-allowed' : 'shadow-2xl hover:border-white/20'}`}
             >
-              {/* Shimmer for mythic */}
-              {pack.id === 'mythic' && (
-                <motion.div
-                  animate={{ x: ['-100%', '200%'] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 pointer-events-none"
-                />
-              )}
-
-              <div className="text-4xl shrink-0">{pack.icon}</div>
-
-              <div className="flex-1 text-left">
-                <div className="text-sm font-black uppercase tracking-widest text-white">{pack.name}</div>
-                <div className="text-xs text-white/60 mt-0.5">{pack.desc}</div>
+              {/* Ball Illustration */}
+              <div className="flex-1 flex items-center justify-center relative w-full mb-4">
+                 <div className={`absolute inset-0 ${pack.accent} blur-[60px] opacity-10 group-hover:opacity-30 transition-opacity`} />
+                 <motion.img 
+                   animate={{ y: [0, -10, 0] }}
+                   transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                   src={pack.icon} 
+                   alt={pack.name} 
+                   className="w-32 h-32 object-contain relative z-10 drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-transform group-hover:scale-110" 
+                 />
               </div>
 
-              <div className={`px-4 py-2 rounded-2xl text-sm font-black ${canAfford ? 'bg-white/20 text-white' : 'bg-black/20 text-white/40'}`}>
-                🪙 {pack.cost}
+              {/* Info Area */}
+              <div className="relative z-20 w-full flex flex-col items-center">
+                <div className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] mb-1">{pack.id}</div>
+                <h3 className="text-3xl font-black text-white italic tracking-tighter leading-none mb-6">{pack.name}</h3>
+                
+                {/* Clean Price Tag */}
+                <div className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 border-2 transition-all ${canAfford ? 'bg-white text-slate-900 border-white font-black shadow-xl' : 'bg-black/40 border-white/5 text-white/30'}`}>
+                   <Coins size={18} className={canAfford ? "text-amber-500" : "text-slate-700"} />
+                   <span className="text-xl leading-none">{pack.cost.toLocaleString()}</span>
+                </div>
               </div>
             </motion.button>
           );
         })}
       </div>
 
-      {/* Rarity Chart */}
-      <div className="glass-panel !p-5">
-        <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Rarity Rates (Basic Pack)</h3>
-        <div className="space-y-2">
-          {[
-            { name: 'Common',      pct: '50%', color: 'bg-slate-500' },
-            { name: 'Rare',        pct: '25%', color: 'bg-blue-500' },
-            { name: 'Super Rare',  pct: '12%', color: 'bg-violet-500' },
-            { name: 'Ultra Rare',  pct: '8%',  color: 'bg-rose-500' },
-            { name: 'Legendary',   pct: '4%',  color: 'bg-amber-500' },
-            { name: 'Mythic',      pct: '1%',  color: 'bg-pink-500' },
-          ].map((r) => (
-            <div key={r.name} className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${r.color} shrink-0`} />
-              <div className="flex-1 text-xs font-bold text-slate-300">{r.name}</div>
-              <div className="text-xs font-black text-slate-400">{r.pct}</div>
+      {/* ── INTERACTIVE PROBABILITY PANEL ── */}
+      <div className="bg-slate-900/60 border-t-2 border-white/5 p-6 backdrop-blur-3xl shrink-0 rounded-t-[2.5rem]">
+         <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+               <div className="w-1.5 h-6 bg-sky-500 rounded-full" />
+               <h3 className="text-lg font-black uppercase tracking-[0.4em] text-white italic">
+                  Probabilities: <span className="text-sky-400">{(hoveredPack || SUMMON_PACKS[0]).name}</span>
+               </h3>
             </div>
-          ))}
-        </div>
+            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">
+               Hover cards to compare rates
+            </div>
+         </div>
+         
+         <div className="grid grid-cols-6 gap-4">
+            {[
+              { id: 'common', name: 'Common',      color: 'bg-slate-500' },
+              { id: 'rare',   name: 'Rare',        color: 'bg-blue-500' },
+              { id: 'sr',     name: 'Super Rare',  color: 'bg-violet-500' },
+              { id: 'ur',     name: 'Ultra Rare',  color: 'bg-rose-500' },
+              { id: 'leg',    name: 'Legendary',   color: 'bg-amber-500' },
+              { id: 'myth',   name: 'Mythic',      color: 'bg-fuchsia-500' },
+            ].map((r) => {
+              const val = activeRates[r.id as keyof typeof activeRates];
+              return (
+                <div key={r.name} className="flex flex-col gap-2 p-4 rounded-2xl bg-white/5 border border-white/5 transition-all">
+                   <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{r.name}</span>
+                      <motion.span 
+                        key={val}
+                        initial={{ scale: 1.2, color: '#38bdf8' }}
+                        animate={{ scale: 1, color: '#ffffff' }}
+                        className="text-sm font-black text-white"
+                      >
+                        {val}
+                      </motion.span>
+                   </div>
+                   <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden">
+                      <motion.div 
+                        animate={{ width: val }}
+                        className={`h-full ${r.color}`} 
+                      />
+                   </div>
+                </div>
+              );
+            })}
+         </div>
       </div>
 
       {/* Summon Animation Overlay */}

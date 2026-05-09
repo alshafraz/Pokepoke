@@ -1,15 +1,43 @@
 import { MonsterCard, Rarity } from '@/store/useGameStore';
 
+export interface PokeballType {
+  id: string;
+  name: string;
+  catchMultiplier: number;
+  rarity: 'Common' | 'Rare' | 'Super Rare' | 'Ultra Rare' | 'Legendary';
+  color: string;
+  glow: string;
+  sprite: string;
+}
+
+export const POKEBALLS: PokeballType[] = [
+  { id: 'pokeball', name: 'Poké Ball', catchMultiplier: 1.0, rarity: 'Common', color: 'from-red-500 to-red-700', glow: 'shadow-red-500/50', sprite: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png' },
+  { id: 'greatball', name: 'Great Ball', catchMultiplier: 1.5, rarity: 'Rare', color: 'from-blue-500 to-blue-700', glow: 'shadow-blue-500/50', sprite: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png' },
+  { id: 'ultraball', name: 'Ultra Ball', catchMultiplier: 2.0, rarity: 'Super Rare', color: 'from-yellow-400 to-amber-600', glow: 'shadow-yellow-500/50', sprite: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ultra-ball.png' },
+  { id: 'luxuryball', name: 'Luxury Ball', catchMultiplier: 2.5, rarity: 'Ultra Rare', color: 'from-slate-700 to-slate-900', glow: 'shadow-slate-400/50', sprite: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/luxury-ball.png' },
+  { id: 'masterball', name: 'Master Ball', catchMultiplier: 10.0, rarity: 'Legendary', color: 'from-purple-500 via-pink-500 to-indigo-600', glow: 'shadow-purple-500/80', sprite: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png' },
+];
+
+export const CAPTURE_RATES: Record<Rarity, number> = {
+  Common: 0.8,
+  Rare: 0.6,
+  'Super Rare': 0.4,
+  'Ultra Rare': 0.2,
+  Legendary: 0.1,
+  Mythic: 0.05,
+};
+
 const POKEAPI_BASE = 'https://pokeapi.co/api/v2';
 
 
+// ── BALANCED RARITY CONFIG (Higher HP to prolong battles) ──
 const RARITY_CONFIG: Record<Rarity, { stars: number; weight: number; hpBonus: number; atkBonus: number }> = {
-  Common:       { stars: 1, weight: 50, hpBonus: 1.0, atkBonus: 1.0 },
-  Rare:         { stars: 2, weight: 25, hpBonus: 1.2, atkBonus: 1.2 },
-  'Super Rare': { stars: 3, weight: 12, hpBonus: 1.4, atkBonus: 1.4 },
-  'Ultra Rare': { stars: 4, weight: 8,  hpBonus: 1.7, atkBonus: 1.6 },
-  Legendary:    { stars: 5, weight: 4,  hpBonus: 2.0, atkBonus: 2.0 },
-  Mythic:       { stars: 6, weight: 1,  hpBonus: 2.5, atkBonus: 2.5 },
+  Common:       { stars: 1, weight: 50, hpBonus: 1.5, atkBonus: 0.8 }, // Reduced ATK, boosted HP
+  Rare:         { stars: 2, weight: 25, hpBonus: 2.2, atkBonus: 1.0 },
+  'Super Rare': { stars: 3, weight: 12, hpBonus: 3.5, atkBonus: 1.2 },
+  'Ultra Rare': { stars: 4, weight: 8,  hpBonus: 5.0, atkBonus: 1.5 },
+  Legendary:    { stars: 5, weight: 4,  hpBonus: 7.5, atkBonus: 2.0 },
+  Mythic:       { stars: 6, weight: 1,  hpBonus: 10.0, atkBonus: 2.5 },
 };
 
 const SPECIAL_MOVES: Record<string, string[]> = {
@@ -64,8 +92,16 @@ export async function fetchRandomMonster(forceRarity?: Rarity): Promise<MonsterC
   const isShiny = Math.random() < 0.05 || rarity === 'Mythic';
   const types: string[] = data.types.map((t: any) => t.type.name);
   const primaryType = types[0] || 'default';
-  const moves = SPECIAL_MOVES[primaryType] || SPECIAL_MOVES.default;
-  const specialMove = moves[Math.floor(Math.random() * moves.length)];
+  
+  // Fetch real moves from PokeAPI
+  const apiMoves = data.moves
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 5)
+    .map((m: any) => m.move.name.charAt(0).toUpperCase() + m.move.name.slice(1).replace(/-/g, ' '));
+    
+  const typeMoves = SPECIAL_MOVES[primaryType] || SPECIAL_MOVES.default;
+  const specialMove = typeMoves[Math.floor(Math.random() * typeMoves.length)];
+  const specialSkill = apiMoves[0] || 'Quick Attack';
 
   const baseHp = data.stats.find((s: any) => s.stat.name === 'hp')?.base_stat ?? 60;
   const baseAtk = data.stats.find((s: any) => s.stat.name === 'attack')?.base_stat ?? 50;
@@ -74,11 +110,11 @@ export async function fetchRandomMonster(forceRarity?: Rarity): Promise<MonsterC
 
   const hp = Math.round(baseHp * config.hpBonus);
   const attack = Math.round(baseAtk * config.atkBonus);
-  const defense = Math.round(baseDef * config.hpBonus);
+  const defense = Math.round(baseDef * (config.hpBonus * 0.8)); // Def also scales with HP bonus to stay relevant
   const speed = baseSpd;
   
-  // Calculate CP (Combat Power) - High CP for rare cards
-  const cp = Math.round((hp + attack + defense + speed) * (config.hpBonus + config.atkBonus) * (isShiny ? 1.2 : 1));
+  // Calculate CP (Combat Power)
+  const cp = Math.round((hp + attack + defense + speed) * 0.4);
 
   return {
     id: `${data.id}-${Date.now()}`,
@@ -94,6 +130,7 @@ export async function fetchRandomMonster(forceRarity?: Rarity): Promise<MonsterC
     speed,
     cp,
     specialMove,
+    specialSkill,
     isShiny,
     sprite: isShiny
       ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${data.id}.png`

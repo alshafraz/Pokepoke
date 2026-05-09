@@ -13,6 +13,7 @@ interface HoloCardProps {
   selected?: boolean;
   showStats?: boolean;
   isRevealing?: boolean;
+  currentHp?: number;
 }
 
 const TYPE_ICONS: Record<string, string> = {
@@ -48,7 +49,7 @@ const TYPE_THEMES: Record<string, {
   default:  { primary: '#38bdf8', secondary: '#1e293b', glow: 'shadow-sky-500/50', aura: 'bg-sky-500/20', bg: 'from-slate-900 via-slate-950 to-black', particles: '✨' },
 };
 
-export function HoloCard({ card, size = 'md', onClick, selected, showStats, isRevealing }: HoloCardProps) {
+export function HoloCard({ card, size = 'md', onClick, selected, showStats, isRevealing, currentHp }: HoloCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   
@@ -281,7 +282,7 @@ export function HoloCard({ card, size = 'md', onClick, selected, showStats, isRe
           <div className="grid grid-cols-2 gap-3 mt-4">
             <StatSegment label="ATK" value={card.attack} max={250} icon={<Swords size={12} />} color="bg-rose-500" />
             <StatSegment label="DEF" value={card.defense} max={250} icon={<Shield size={12} />} color="bg-sky-500" />
-            <StatSegment label="HP" value={card.hp} max={300} icon={<Heart size={12} />} color="bg-emerald-500" />
+            <StatSegment label="HP" value={currentHp !== undefined ? currentHp : card.hp} max={card.hp} icon={<Heart size={12} />} color="bg-emerald-500" />
             <StatSegment label="SPD" value={card.speed} max={200} icon={<Wind size={12} />} color="bg-amber-500" />
           </div>
 

@@ -6,10 +6,10 @@ import { useGameStore } from '@/store/useGameStore';
 import { fetchRandomMonster } from '@/services/gameData';
 import { HoloCard } from './HoloCard';
 import { MonsterCard, Rarity } from '@/store/useGameStore';
-import { Swords, RefreshCw, Shield } from 'lucide-react';
+import { Swords, RefreshCw, Shield, Filter, Search, Trophy, RotateCcw } from 'lucide-react';
 
 export function ArcadeMode() {
-  const { collection, startBattle, setMode, selectedCard, selectCard } = useGameStore();
+  const { collection, startBattle, setMode, selectedCard, selectCard, arcadeSession, startArcadeSession } = useGameStore();
   const [enemy, setEnemy] = useState<MonsterCard | null>(null);
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState<'added' | 'power' | 'defense' | 'rarity'>('power');
@@ -32,14 +32,25 @@ export function ArcadeMode() {
   const fetchEnemy = async () => {
     setLoading(true);
     try {
-      const card = await fetchRandomMonster();
+      // Logic: Pick high rarity for enemy (Stars >= 4)
+      const highRarities: Rarity[] = ['Ultra Rare', 'Legendary', 'Mythic'];
+      const randomHighRarity = highRarities[Math.floor(Math.random() * highRarities.length)];
+      const card = await fetchRandomMonster(randomHighRarity);
       setEnemy(card);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchEnemy(); }, []);
+  useEffect(() => { 
+    fetchEnemy();
+    if (arcadeSession.rounds === 0 && arcadeSession.results.length === 0) {
+      startArcadeSession();
+    }
+    if (!selectedCard && collection.length > 0) {
+      selectCard(collection[0]);
+    }
+  }, []);
 
   const handleBattle = () => {
     if (!selectedCard || !enemy) return;
@@ -47,147 +58,178 @@ export function ArcadeMode() {
     setMode('battle');
   };
 
-  if (collection.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center gap-6">
-        <div className="text-7xl">⚔️</div>
-        <div>
-          <h3 className="text-xl font-black italic uppercase tracking-tighter text-slate-300 mb-2">No Monsters!</h3>
-          <p className="text-slate-500 text-sm mb-6">Summon at least one monster to start battling</p>
-          <motion.button
-            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-            onClick={() => setMode('summon')}
-            className="px-8 py-3 rounded-2xl bg-sky-500 text-slate-950 font-black uppercase tracking-widest text-sm"
-          >
-            Go Summon →
-          </motion.button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="px-4 py-6 space-y-12">
-      <div className="text-center">
-        <h2 className="text-3xl font-black italic uppercase tracking-tighter neon-text mb-1">Arcade Battle</h2>
-        <p className="text-slate-500 text-sm">Face your destiny in the arena</p>
-      </div>
-
-      {/* VS Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-        {/* Player Side */}
-        <div className="space-y-3">
-          <div className="text-[10px] font-black text-sky-400 uppercase tracking-widest text-center">Your Fighter</div>
-          {selectedCard ? (
-            <div className="flex justify-center">
-              <HoloCard card={selectedCard} size="md" showStats selected />
+    <div className="h-full flex gap-8 overflow-hidden relative p-4">
+      
+      {/* ── LEFT SIDEBAR: COLLECTION (380px) ── */}
+      <div className="w-[380px] shrink-0 flex flex-col bg-slate-900/40 backdrop-blur-3xl rounded-[3rem] border-2 border-white/5 overflow-hidden">
+         <div className="p-8 border-b border-white/5">
+            <div className="flex items-center justify-between mb-6">
+               <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-sky-500 flex items-center justify-center shadow-lg"><Filter size={20} className="text-white" /></div>
+                  <h3 className="text-xl font-black italic uppercase tracking-tighter text-white">Fighters</h3>
+               </div>
+               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full">{filteredCollection.length} CARDS</span>
             </div>
-          ) : (
-            <div className="flex justify-center">
-              <div className="w-52 h-72 rounded-2xl border-2 border-dashed border-slate-700 flex flex-col items-center justify-center text-slate-600 gap-2">
-                <Shield size={32} />
-                <span className="text-xs font-black uppercase">Pick Below</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Center: Battle Button */}
-        <div className="flex flex-col items-center gap-6 py-8">
-          <div className="text-6xl font-black italic text-slate-800 tracking-tighter opacity-50">VS</div>
-          <motion.button
-            whileHover={selectedCard && enemy ? { scale: 1.1, rotate: 5 } : {}}
-            whileTap={selectedCard && enemy ? { scale: 0.9 } : {}}
-            onClick={handleBattle}
-            disabled={!selectedCard || !enemy || loading}
-            className={`relative w-28 h-28 rounded-full flex flex-col items-center justify-center gap-1 transition-all ${
-              selectedCard && enemy
-                ? 'bg-gradient-to-br from-rose-500 to-indigo-600 text-white shadow-[0_0_50px_rgba(225,29,72,0.6)] border-4 border-white'
-                : 'bg-slate-900 text-slate-600 border-4 border-slate-800 cursor-not-allowed opacity-50'
-            }`}
-          >
-            <Swords size={36} />
-            <span className="text-[10px] font-black uppercase tracking-widest">Fight</span>
             
-            {/* Animated Ring for ready state */}
-            {selectedCard && enemy && (
-              <motion.div 
-                animate={{ scale: [1, 1.3, 1], opacity: [0.8, 0, 0.8] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                className="absolute inset-0 rounded-full border-4 border-white/50"
-              />
-            )}
-          </motion.button>
-        </div>
+            <div className="flex gap-2">
+               <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="flex-1 bg-white/5 border border-white/10 text-[10px] font-black uppercase text-white/40 px-4 py-2.5 rounded-xl outline-none focus:border-sky-500 transition-colors">
+                  <option value="power">Sort: CP</option>
+                  <option value="rarity">Sort: Rarity</option>
+               </select>
+               <select value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)} className="flex-1 bg-white/5 border border-white/10 text-[10px] font-black uppercase text-white/40 px-4 py-2.5 rounded-xl outline-none focus:border-sky-500 transition-colors">
+                  <option value="All">All Type</option>
+                  {['Rare', 'Super Rare', 'Ultra Rare', 'Legendary', 'Mythic'].map(r => <option key={r} value={r}>{r}</option>)}
+               </select>
+            </div>
+         </div>
 
-        {/* Enemy Side */}
-        <div className="flex flex-col items-center gap-3">
-          <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest text-center w-full">Enemy</div>
-          {loading ? (
-            <div className="w-52 h-72 rounded-2xl border border-slate-800 flex items-center justify-center mx-auto">
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity }} className="w-10 h-10 border-4 border-sky-400 border-t-transparent rounded-full" />
-            </div>
-          ) : enemy ? (
-            <div className="flex justify-center w-full">
-              <HoloCard card={enemy} size="md" showStats />
-            </div>
-          ) : null}
-          <motion.button
-            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-            onClick={fetchEnemy}
-            className="px-6 py-2 rounded-xl border border-slate-700 text-slate-400 text-[10px] font-black uppercase flex items-center justify-center gap-2 hover:border-sky-500/50"
-          >
-            <RefreshCw size={12} /> New Enemy
-          </motion.button>
-        </div>
+         <div className="flex-1 overflow-y-auto scrollbar-hide p-6 space-y-4">
+            {filteredCollection.map((card) => {
+               const isSelected = selectedCard?.id === card.id;
+               const hp = arcadeSession.collectionHp[card.id] ?? card.hp;
+               const isFainted = hp === 0;
+
+               return (
+                 <motion.button
+                   key={card.id}
+                   whileHover={!isFainted ? { x: 10 } : {}}
+                   whileTap={!isFainted ? { scale: 0.98 } : {}}
+                   onClick={() => !isFainted && selectCard(card)}
+                   className={`w-full group relative flex items-center gap-4 p-4 rounded-3xl border-2 transition-all overflow-hidden
+                     ${isSelected 
+                        ? 'bg-sky-500/20 border-sky-500/50 shadow-[0_0_20px_rgba(56,189,248,0.1)]' 
+                        : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.05]'}`}
+                 >
+                    <div className="w-16 h-16 rounded-2xl bg-black/40 overflow-hidden relative shrink-0 border border-white/10">
+                       <img src={card.artworkUrl} className={`w-full h-full object-contain ${isFainted ? 'grayscale' : ''}`} alt={card.name} />
+                       {isFainted && <div className="absolute inset-0 bg-rose-500/40 flex items-center justify-center"><Shield size={16} className="text-white" /></div>}
+                    </div>
+
+                    <div className="flex-1 text-left">
+                       <div className="flex justify-between items-start mb-1">
+                          <span className="text-xs font-black text-white italic uppercase truncate w-32">{card.displayName}</span>
+                          <span className="text-[10px] font-black text-sky-400">CP {card.cp.toLocaleString()}</span>
+                       </div>
+                       <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${(hp / card.hp) * 100}%` }} className={`h-full ${hp < card.hp * 0.3 ? 'bg-rose-500' : 'bg-sky-500'}`} />
+                       </div>
+                    </div>
+
+                    {isSelected && (
+                       <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                          <div className="w-2 h-2 rounded-full bg-sky-500 animate-ping" />
+                       </div>
+                    )}
+                 </motion.button>
+               );
+            })}
+         </div>
       </div>
 
-      {/* Select from collection */}
-      <div className="relative">
-        <div className="flex items-center justify-between mb-3 px-2">
-          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Choose Your Fighter</div>
-          <div className="flex gap-2">
-            <select 
-              value={sortBy} 
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-slate-900 border border-slate-700 text-[10px] font-black uppercase text-slate-400 px-3 py-1.5 rounded-lg focus:border-sky-500 outline-none"
-            >
-              <option value="power">Sort: Power</option>
-              <option value="defense">Sort: Defense</option>
-              <option value="rarity">Sort: Rarity</option>
-              <option value="added">Sort: Newest</option>
-            </select>
-            <select 
-              value={rarityFilter} 
-              onChange={(e) => setRarityFilter(e.target.value)}
-              className="bg-slate-900 border border-slate-700 text-[10px] font-black uppercase text-slate-400 px-3 py-1.5 rounded-lg focus:border-sky-500 outline-none"
-            >
-              <option value="All">All Rarity</option>
-              {['Common', 'Rare', 'Super Rare', 'Ultra Rare', 'Legendary', 'Mythic'].map(r => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        
-        <div className="flex -space-x-12 overflow-x-auto scrollbar-hide py-12 px-10">
-          {filteredCollection.map((card) => (
+      {/* ── RIGHT PANEL: MAIN ARENA (70%) ── */}
+      <div className="flex-1 flex flex-col relative overflow-hidden">
+         
+         <div className="flex items-center justify-between px-10 pt-4 mb-8">
+            <div className="flex items-center gap-4">
+               <div className="w-1 h-8 bg-sky-500 rounded-full shadow-[0_0_10px_rgba(56,189,248,1)]" />
+               <div>
+                  <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">Battle Arena</h2>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Match preparation phase</p>
+               </div>
+            </div>
+            <div className="px-8 py-3 bg-white/5 border-2 border-white/5 rounded-2xl text-xs font-black text-white uppercase tracking-[0.4em] italic backdrop-blur-xl">
+               ROUND {arcadeSession.rounds + 1} / {arcadeSession.maxRounds}
+            </div>
+         </div>
+
+         <div className="flex-1 flex items-center justify-between px-20 relative">
+            
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0">
+               <div className="text-[25rem] font-black italic text-white/[0.02] tracking-tighter select-none">VS</div>
+            </div>
+
+            {/* Selected Fighter */}
             <motion.div 
-              key={card.id} 
-              className="shrink-0"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
+               key={selectedCard?.id}
+               initial={{ x: -100, opacity: 0 }} 
+               animate={{ x: 0, opacity: 1 }}
+               className="relative z-10"
             >
-              <HoloCard
-                card={card}
-                size="md"
-                selected={selectedCard?.id === card.id}
-                onClick={() => selectCard(card)}
-              />
+               <div className="mb-4 text-center">
+                  <span className="text-[10px] font-black text-sky-400 uppercase tracking-[0.4em]">YOUR FIGHTER</span>
+               </div>
+               {selectedCard && (
+                  <div className="relative group">
+                     <HoloCard card={selectedCard} size="lg" showStats />
+                     <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[80%] h-4 bg-sky-500/20 blur-2xl rounded-full" />
+                  </div>
+               )}
             </motion.div>
-          ))}
-        </div>
+
+            {/* Action Center */}
+            <div className="flex flex-col items-center gap-10 z-20">
+               <motion.button
+                 whileHover={selectedCard && enemy ? { scale: 1.1, rotate: 5 } : {}}
+                 whileTap={selectedCard && enemy ? { scale: 0.9 } : {}}
+                 onClick={handleBattle}
+                 disabled={!selectedCard || !enemy || loading || (arcadeSession.collectionHp[selectedCard?.id || ''] === 0)}
+                 className={`w-40 h-40 rounded-full border-[10px] transition-all flex flex-col items-center justify-center gap-2 shadow-2xl relative
+                   ${selectedCard && enemy && (arcadeSession.collectionHp[selectedCard.id] !== 0)
+                     ? 'bg-gradient-to-br from-rose-500 to-indigo-600 border-white text-white shadow-rose-500/60'
+                     : 'bg-slate-900 border-white/5 text-slate-700 opacity-50 cursor-not-allowed'}`}
+               >
+                  <Swords size={56} />
+                  <span className="text-sm font-black uppercase tracking-[0.3em] italic">Fight!</span>
+                  
+                  {selectedCard && enemy && (arcadeSession.collectionHp[selectedCard.id] !== 0) && (
+                    <motion.div 
+                       animate={{ scale: [1, 1.4], opacity: [0.3, 0] }} 
+                       transition={{ duration: 1.5, repeat: Infinity }} 
+                       className="absolute inset-0 rounded-full border-4 border-white/30" 
+                    />
+                  )}
+               </motion.button>
+            </div>
+
+            {/* Enemy Fighter */}
+            <motion.div 
+               key={enemy?.id}
+               initial={{ x: 100, opacity: 0 }} 
+               animate={{ x: 0, opacity: 1 }}
+               className="relative z-10"
+            >
+               <div className="mb-4 flex items-center justify-center gap-4">
+                  <span className="text-[10px] font-black text-rose-400 uppercase tracking-[0.4em]">ENEMY UNIT</span>
+                  {/* Slimmed down Change Enemy Button */}
+                  <button 
+                    onClick={fetchEnemy} 
+                    disabled={loading}
+                    className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-rose-500/20 hover:border-rose-500/50 transition-all group/btn shadow-lg"
+                    title="Change Enemy"
+                  >
+                    <RotateCcw size={14} className={`text-white/40 group-hover/btn:text-rose-400 ${loading ? 'animate-spin' : ''}`} />
+                  </button>
+               </div>
+               {loading ? (
+                  <div className="w-80 h-[30rem] rounded-[2.5rem] bg-black/40 border-4 border-white/5 flex items-center justify-center">
+                     <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity }} className="w-12 h-12 border-4 border-rose-500 border-t-transparent rounded-full" />
+                  </div>
+               ) : enemy ? (
+                  <div className="relative group">
+                     <HoloCard card={enemy} size="lg" showStats />
+                     <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[80%] h-4 bg-rose-500/20 blur-2xl rounded-full" />
+                  </div>
+               ) : null}
+            </motion.div>
+
+         </div>
+
+         <div className="h-20 flex items-center justify-center opacity-10">
+            <Trophy size={60} className="text-white" />
+         </div>
       </div>
+
     </div>
   );
 }
