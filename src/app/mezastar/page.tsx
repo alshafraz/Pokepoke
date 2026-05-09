@@ -6,8 +6,9 @@ import { BattleArena } from '@/components/game/BattleArena';
 import { SummonPanel } from '@/components/game/SummonPanel';
 import { CollectionView } from '@/components/game/CollectionView';
 import { ArcadeMode } from '@/components/game/ArcadeMode';
-import { Swords, Sparkles, Package, Coins, User, ChevronLeft, Shield, Trophy } from 'lucide-react';
+import { Swords, Sparkles, Package, Coins, User, ChevronLeft, Shield, Trophy, Zap } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
+import { fetchRandomMonster } from '@/services/gameData';
 
 // Pool of cool Pokemons for each category type
 const TYPE_POOLS = {
@@ -57,9 +58,10 @@ const MODES_CONFIG = [
 ] as const;
 
 export default function MezastarPage() {
-  const { currentMode, setMode, coins, level, xp, collection, addCoins, arcadeSession } = useGameStore();
+  const { currentMode, setMode, coins, level, xp, collection, addCoins, arcadeSession, addToCollection } = useGameStore();
   const [adminMode, setAdminMode] = useState(false);
   const [clickCount, setClickCount] = useState(0);
+  const [mounted, setMounted] = useState(false);
   
   // State for randomized images
   const [randomImages, setRandomImages] = useState<Record<string, string>>({});
@@ -73,6 +75,7 @@ export default function MezastarPage() {
       newImages[mode.id] = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${randomId}.png`;
     });
     setRandomImages(newImages);
+    setMounted(true);
   }, []);
 
   const handleAdminTrigger = () => {
@@ -81,6 +84,15 @@ export default function MezastarPage() {
       setAdminMode(true);
       setClickCount(0);
     }
+  };
+
+  const handleBulkSummon = async () => {
+    // Summon 10 monsters at once
+    for (let i = 0; i < 10; i++) {
+       const monster = await fetchRandomMonster();
+       addToCollection(monster);
+    }
+    setAdminMode(false);
   };
 
   const xpRequired = level * 100;
@@ -120,7 +132,9 @@ export default function MezastarPage() {
                    <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/40">
                       <Coins size={20} className="text-amber-400" />
                    </div>
-                   <span className="text-2xl font-black text-white leading-none">{coins.toLocaleString()}</span>
+                    <span className="text-2xl font-black text-white leading-none">
+                      {mounted ? coins.toLocaleString() : '---'}
+                    </span>
                 </div>
                 <div className="flex items-center gap-4">
                    <button onClick={handleAdminTrigger} className="w-12 h-12 rounded-2xl bg-sky-500 flex items-center justify-center border-2 border-white/20 shadow-xl">
@@ -234,7 +248,14 @@ export default function MezastarPage() {
                    <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter">Trainer Console</h3>
                    <button onClick={() => setAdminMode(false)} className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center hover:bg-white/10 transition-colors"><ChevronLeft size={28} /></button>
                 </div>
-                <button onClick={() => { addCoins(100000); setAdminMode(false); }} className="w-full py-8 bg-sky-600 text-white rounded-[2rem] font-black text-2xl shadow-2xl hover:bg-sky-500 transition-all uppercase tracking-widest">GET 100,000 COINS</button>
+                 <div className="space-y-4">
+                    <button onClick={() => { addCoins(100000); setAdminMode(false); }} className="w-full py-8 bg-amber-500 text-slate-950 rounded-[2rem] font-black text-2xl shadow-2xl hover:bg-amber-400 transition-all uppercase tracking-widest flex items-center justify-center gap-4">
+                       <Coins size={32} /> GET 100,000 COINS
+                    </button>
+                    <button onClick={handleBulkSummon} className="w-full py-8 bg-indigo-600 text-white rounded-[2rem] font-black text-2xl shadow-2xl hover:bg-indigo-500 transition-all uppercase tracking-widest flex items-center justify-center gap-4">
+                       <Zap size={32} /> BULK SUMMON (x10)
+                    </button>
+                 </div>
              </motion.div>
           </div>
         )}

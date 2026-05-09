@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getEffectiveness } from '@/services/gameData';
 
 export type Rarity = 'Common' | 'Rare' | 'Super Rare' | 'Ultra Rare' | 'Legendary' | 'Mythic';
 
@@ -68,12 +69,13 @@ export interface GameStore {
     enemies: MonsterCard[];
     captureTarget: MonsterCard | null;
     collectionHp: Record<string, number>; // cardId -> currentHp
+    isChoosingTarget: boolean;
     results: { pokemonId: string; status: 'captured' | 'escaped' | 'skipped' | 'won' | 'lost' }[];
   };
 
   // Actions
   setMode: (mode: GameStore['currentMode']) => void;
-  selectCard: (card: MonsterCard) => void;
+  selectCard: (card: MonsterCard | null) => void;
   addToCollection: (card: MonsterCard) => void;
   startBattle: (player: MonsterCard, enemy: MonsterCard) => void;
   
@@ -89,6 +91,7 @@ export interface GameStore {
   startArcadeSession: () => void;
   endArcadeSession: () => void;
   recordRoundResult: (result: { pokemonId: string; status: 'captured' | 'escaped' | 'skipped' | 'won' | 'lost' }, enemy?: MonsterCard) => void;
+  setCaptureTarget: (card: MonsterCard) => void;
 }
 
 const initialBattle: BattleState = {
@@ -125,6 +128,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     enemies: [],
     captureTarget: null,
     collectionHp: {},
+    isChoosingTarget: false,
     results: [],
   },
 
@@ -184,11 +188,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
     } else {
       const baseAtk = battle.playerCard.attack;
       const baseDef = battle.enemyCard.defense;
-      const rawDmg = Math.max(10, baseAtk * config.dmgMult - baseDef * 0.2); // Adjusted scaling
+      
+      // Calculate Type Effectiveness
+      const effectiveness = getEffectiveness(battle.playerCard.types, battle.enemyCard.types);
+      const effMult = effectiveness > 1 ? 1.5 : effectiveness < 1 && effectiveness > 0 ? 0.75 : effectiveness === 0 ? 0 : 1;
+      
+      const rawDmg = Math.max(10, baseAtk * config.dmgMult * effMult - baseDef * 0.2);
       dmg = Math.round(rawDmg * (isCritical ? 1.75 : 1) * (0.85 + Math.random() * 0.3));
       
       const moveName = type === 'attack' ? 'Attack' : type === 'special' ? battle.playerCard.specialSkill : battle.playerCard.specialMove;
       logEntry = `⚔️ ${battle.playerCard.displayName} used ${moveName} for ${dmg}!`;
+      if (effectiveness > 1) logEntry = `💥 SUPER EFFECTIVE! ${logEntry}`;
+      if (effectiveness < 1 && effectiveness > 0) logEntry = `🛡️ It's not very effective... ${logEntry}`;
+      if (effectiveness === 0) logEntry = `🚫 It had no effect! ${logEntry}`;
     }
 
     const newEnemyHp = Math.max(0, battle.enemyHp - dmg);
@@ -196,6 +208,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const newPhase = newEnemyHp <= 0 ? 'victory' : 'battling';
 
     set((s) => ({
+      arcadeSession: {
+        ...s.arcadeSession,
+        collectionHp: {
+          ...s.arcadeSession.collectionHp,
+          [battle.playerCard.id]: battle.playerHp // Ensure player HP is persisted even on victory
+        }
+      },
       battle: {
         ...s.battle,
         phase: newPhase,
@@ -219,12 +238,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
     
     const enemyBaseAtk = battle.enemyCard.attack;
     const enemyBaseDef = battle.playerCard.defense;
-    const enemyRawDmg = Math.max(8, enemyBaseAtk * (enemyAction === 'special' ? 1.5 : 1) - enemyBaseDef * (battle.isDefending ? 0.6 : 0.2));
+    
+    // Enemy Type Effectiveness
+    const enemyEff = getEffectiveness(battle.enemyCard.types, battle.playerCard.types);
+    const enemyEffMult = enemyEff > 1 ? 1.5 : enemyEff < 1 && enemyEff > 0 ? 0.75 : enemyEff === 0 ? 0 : 1;
+
+    const enemyRawDmg = Math.max(8, enemyBaseAtk * (enemyAction === 'special' ? 1.5 : 1) * enemyEffMult - enemyBaseDef * (battle.isDefending ? 0.6 : 0.2));
     const enemyDmg = Math.round(enemyRawDmg * (0.8 + Math.random() * 0.4));
     
     const newPlayerHp = Math.max(0, battle.playerHp - enemyDmg);
     const newEnemyEnergy = Math.min(100, battle.enemyEnergy + (enemyAction === 'special' ? -40 : 20));
-    const enemyLog = `🥊 Enemy used ${enemyAction === 'special' ? battle.enemyCard.specialSkill : 'Attack'} for ${enemyDmg}!`;
+    let enemyLog = `🥊 Enemy used ${enemyAction === 'special' ? battle.enemyCard.specialSkill : 'Attack'} for ${enemyDmg}!`;
+    if (enemyEff > 1) enemyLog = `⚠️ CRITICAL WEAKNESS! ${enemyLog}`;
 
     // Persist HP to session
     const newCollectionHp = {
@@ -252,11 +277,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   resetBattle: () => set({ battle: initialBattle }),
 
   startArcadeSession: () => set({
-    arcadeSession: { rounds: 0, maxRounds: 3, wins: 0, enemies: [], results: [], captureTarget: null, collectionHp: {} }
+    arcadeSession: { rounds: 0, maxRounds: 3, wins: 0, enemies: [], results: [], captureTarget: null, collectionHp: {}, isChoosingTarget: false }
   }),
 
   endArcadeSession: () => set({
-    arcadeSession: { rounds: 0, maxRounds: 3, wins: 0, enemies: [], results: [], captureTarget: null, collectionHp: {} },
+    arcadeSession: { rounds: 0, maxRounds: 3, wins: 0, enemies: [], results: [], captureTarget: null, collectionHp: {}, isChoosingTarget: false },
     currentMode: 'menu'
   }),
 
@@ -265,9 +290,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const newWins = result.status === 'won' ? s.arcadeSession.wins + 1 : s.arcadeSession.wins;
     const newEnemies = enemy ? [...s.arcadeSession.enemies, enemy] : s.arcadeSession.enemies;
     
-    let captureTarget = null;
+    let isChoosingTarget = false;
     if (newRounds >= s.arcadeSession.maxRounds && newWins >= 2 && newEnemies.length > 0) {
-      captureTarget = newEnemies[Math.floor(Math.random() * newEnemies.length)];
+      isChoosingTarget = true;
     }
 
     return {
@@ -277,10 +302,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
         wins: newWins,
         enemies: newEnemies,
         results: [...s.arcadeSession.results, result],
-        captureTarget
+        isChoosingTarget
       }
     };
   }),
+
+  setCaptureTarget: (card) => set((s) => ({
+    arcadeSession: {
+      ...s.arcadeSession,
+      captureTarget: card,
+      isChoosingTarget: false
+    }
+  })),
 
   summonCard: (card) =>
     set((s) => ({
