@@ -4,11 +4,13 @@ A comprehensive, high-fidelity Pokemon companion app and arcade battle simulator
 
 ## 🌟 Core Features
 
-### 🎴 Mezastar Arcade Simulator (New!)
+### 🎴 Mezastar Arcade Simulator (Premium Update!)
 - **Ultra-Premium HoloCards**: 3D parallax, holographic shaders, and type-thematic backgrounds.
 - **Cinematic Summoning**: Dramatic 3-phase reveal sequences for high-impact gacha pulls.
-- **Arcade Arena**: Face off against random enemies with a centralized VS UI and stacked card collection management.
-- **Stat-Based Rarity**: Realistic tiering system based on Base Stat Totals (BST).
+- **Local Asset Stability**: High-definition Poké Ball assets (Basic to Luxury) hosted locally for zero-broken-link reliability.
+- **Sequential Battle Meta**: Turn-based combat system with dedicated attack, reaction, and counter-attack animations.
+- **Balanced Arcade Pacing**: Re-engineered HP and Attack scaling (up to 10x HP for Mythic cards) for longer, more strategic 4-6 turn battles.
+- **Luxury Dashboard UI**: Zero-scroll, single-screen design with a professional sidebar collection management system.
 
 ### 🔍 Shiny Hunter Hub
 - **Real-time Shiny Tracking**: Specialized interface for tracking your hunt progress.
@@ -29,15 +31,15 @@ A comprehensive, high-fidelity Pokemon companion app and arcade battle simulator
 - **Framework**: Next.js 14+ (Turbopack)
 - **Animation**: Framer Motion (3D Transforms, Layout Animations)
 - **Icons**: Lucide React
-- **State Management**: Zustand
+- **State Management**: Zustand (with high-res asset integration)
 - **Database**: Supabase Integration
-- **Styling**: Tailwind CSS & Vanilla CSS
+- **Styling**: Tailwind CSS & Vanilla CSS (Custom Glassmorphism)
 
 ## 🎮 How to Use
 1. **Navigate**: Use the premium navbar to switch between the Pokedex, Shiny Hunter, Maps, and Mezastar.
-2. **Collect**: In Mezastar, spend coins to summon rare holographic tags.
-3. **Explore**: Use the Maps feature to visualize different regions with active weather effects.
-4. **Research**: Deep dive into Pokemon evolution paths in the enhanced Pokedex.
+2. **Collect**: In Mezastar, spend coins to summon rare holographic tags. Balance starts at 100,000 for elite testing.
+3. **Battle**: Enter the Arcade Mode, select your fighter from the Sidebar, and engage in high-stakes duels.
+4. **Explore**: Use the Maps feature to visualize different regions with active weather effects.
 
 ## 🚀 Getting Started
 
